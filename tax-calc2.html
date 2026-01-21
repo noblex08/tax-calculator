@@ -1,0 +1,136 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nigeria 2026 Tax Calculator (Pro)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .card { background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        input[type="number"] { border: 1px solid #d1d5db; padding: 8px; border-radius: 6px; width: 100%; margin-top: 4px; }
+        label { font-weight: 600; font-size: 0.875rem; color: #374151; }
+        .slider { width: 100%; height: 8px; background: #d1d5db; border-radius: 5px; outline: none; transition: .2s; cursor: pointer; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-8 text-gray-800">
+    <div class="max-w-2xl mx-auto">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-green-700">Tax-Calc 2026 -v2</h1>
+            <p class="text-gray-600 italic">AINA - Advanced Deductions & Reliefs</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="card p-6">
+                <h2 class="text-lg font-bold mb-4 border-b pb-2">Salary & Options</h2>
+                
+                <div class="space-y-5">
+                    <div>
+                        <label>Monthly Gross Salary (₦)</label>
+                        <input type="number" id="gross" value="80000" oninput="calculate()">
+                    </div>
+                    <div>
+                        <label>Annual Rent Paid (₦)</label>
+                        <input type="number" id="rent" value="500000" oninput="calculate()">
+                    </div>
+
+                    <div class="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="text-blue-900">Pension (RSA)</label>
+                            <input type="checkbox" id="pension_active" checked onchange="calculate()">
+                        </div>
+                        <input type="range" id="pension_rate" min="1" max="8" value="8" class="slider" oninput="calculate()">
+                        <div class="flex justify-between text-xs font-bold mt-1 text-blue-600">
+                            <span>Rate: <span id="pension_label">8</span>%</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                        <label>NHIS/NHF (7.5% of Basic)</label>
+                        <input type="checkbox" id="nhis_active" checked onchange="calculate()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card p-6 bg-green-50">
+                <h2 class="text-lg font-bold mb-4 border-b border-green-200 pb-2">Net Results</h2>
+                
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Monthly Tax (PAYE):</span>
+                        <span id="res_tax" class="font-bold text-red-600">₦0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Pension Contribution:</span>
+                        <span id="res_pension" class="font-bold text-gray-800">₦0.00</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Health & Housing:</span>
+                        <span id="res_nhis" class="font-bold text-gray-800">₦0.00</span>
+                    </div>
+                    <hr class="border-green-200">
+                    <div class="flex justify-between items-center pt-2">
+                        <span class="text-lg font-bold">Net Take-Home:</span>
+                        <span id="res_net" class="text-2xl font-black text-green-700">₦0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mt-8 p-4 bg-blue-50 rounded-lg text-sm text-blue-800">
+            <strong>Law Summary:</strong> First ₦800,000/year is tax-free (0%). Rent relief is 20% of rent, capped at ₦500k. 
+            Standard Pension up to (8%), NHIS (5% of Basic), and NHF (2.5% of Basic) are deductible.
+        </div>
+        <div class="mt-8 text-center text-xs text-gray-400 uppercase tracking-widest">
+            Based on Nigeria Tax Act 2025 Guidelines
+        </div>
+    </div>
+
+    <script>
+        function calculate() {
+            // Inputs
+            const gross = parseFloat(document.getElementById('gross').value) || 0;
+            const rent = parseFloat(document.getElementById('rent').value) || 0;
+            
+            // Checkboxes & Sliders
+            const pensionActive = document.getElementById('pension_active').checked;
+            const pensionRate = parseFloat(document.getElementById('pension_rate').value);
+            const nhisActive = document.getElementById('nhis_active').checked;
+
+            // Basic Salary Assumption (50% of Gross)
+            const basic = gross * 0.5;
+
+            // UI Update for Slider label
+            document.getElementById('pension_label').innerText = pensionRate;
+
+            // 1. Deductions
+            const annualPension = pensionActive ? (gross * 12 * (pensionRate / 100)) : 0;
+            const annualNHIS = nhisActive ? (basic * 12 * 0.05) : 0;
+            const annualNHF = nhisActive ? (basic * 12 * 0.025) : 0;
+            const rentRelief = Math.min(rent * 0.20, 500000);
+
+            // 2. Taxable Income
+            const taxableIncome = Math.max(0, (gross * 12) - annualPension - annualNHIS - annualNHF - rentRelief);
+
+            // 3. 2026 Tax Logic (0% up to 800k, then 15% on next 2.2m)
+            let annualTax = 0;
+            if (taxableIncome > 800000) {
+                let remainder = taxableIncome - 800000;
+                let b1 = Math.min(remainder, 2200000);
+                annualTax += b1 * 0.15;
+                remainder -= b1;
+                if (remainder > 0) annualTax += Math.min(remainder, 9000000) * 0.18;
+            }
+
+            // Update UI
+            const fmt = (num) => '₦' + num.toLocaleString(undefined, {minimumFractionDigits: 2});
+            
+            document.getElementById('res_tax').innerText = fmt(annualTax / 12);
+            document.getElementById('res_pension').innerText = fmt(annualPension / 12);
+            document.getElementById('res_nhis').innerText = fmt((annualNHIS + annualNHF) / 12);
+            document.getElementById('res_net').innerText = fmt(gross - (annualPension/12) - (annualNHIS/12) - (annualNHF/12) - (annualTax/12));
+        }
+
+        // Initial Run
+        calculate();
+    </script>
+</body>
+</html>
